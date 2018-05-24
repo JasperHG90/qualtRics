@@ -32,7 +32,7 @@
 
 # utils.R contains helper functions for the qualtRics package. These functions should not be called directly by the user and should not be exported.
 
-#' @importFrom dplyr '%>%'
+#' @importFrom magrittr '%>%'
 #' @importFrom dplyr mutate
 #' @importFrom rlang ':='
 #' @importFrom dplyr select
