@@ -45,6 +45,7 @@ to FALSE."
     user_passed_secret <- NULL
 
   }
+
   if("client_id" %in% names(opts)) {
 
     user_passed_id <- opts$client_id
@@ -64,6 +65,7 @@ to FALSE."
     user_passed_id <- NULL
 
   }
+
   if("api_token" %in% names(opts)) {
 
     user_passed_token <- opts$api_token
@@ -83,6 +85,7 @@ to FALSE."
     user_passed_token <- NULL
 
   }
+
   if("data_center" %in% names(opts)) {
 
     user_passed_datacenter <- opts$data_center
@@ -118,17 +121,20 @@ to FALSE."
       check <- vapply(cred, function(x) {
 
         if(!is.null(x)) {
-          if(x > 0) {
-            TRUE
+            if(length(x) > 0) {
+              if(x > 0) {
+                TRUE
+              } else {
+                FALSE
+              }
+            } else {
+              FALSE
+            }
           } else {
             FALSE
           }
-        } else {
-          FALSE
-        }
-
-      },
-      TRUE)
+        },
+        TRUE)
 
       if(!all(check)) {
 
@@ -184,15 +190,18 @@ you set your credentials correctly or use another method to authenticate."
       check <- vapply(cred, function(x) {
 
         if(!is.null(x)) {
-          if(x > 0) {
-            TRUE
+          if(length(x) > 0) {
+            if(x > 0) {
+              TRUE
+            } else {
+              FALSE
+            }
           } else {
             FALSE
           }
         } else {
           FALSE
         }
-
       },
       TRUE)
 
@@ -241,30 +250,8 @@ qualtrics_helper_keychain_credentials <- function(type = c("oauth", "token")) {
 
   type <- match.arg(type)
 
-  # Helper function to determine type of OS
-  # Todo: add windows
-  get_os <- function(){
-
-    sysinf <- Sys.info()
-
-    if (!is.null(sysinf)){
-      os <- sysinf['sysname']
-      if (os == 'Darwin')
-        os <- "osx"
-    } else { ## mystery machine
-      os <- .Platform$OS.type
-      if (grepl("^darwin", R.version$os))
-        os <- "osx"
-      if (grepl("linux-gnu", R.version$os))
-        os <- "linux"
-    }
-
-    tolower(os)
-
-  }
-
-  # Get OS
-  os <- get_os()
+  # Get OS variable
+  os <- Sys.getenv("QUALTRICS_SYS_OS")
 
   if(type == "oauth") {
 

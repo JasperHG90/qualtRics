@@ -8,15 +8,59 @@ qualtrics_set_bearer_token <- function() {
     grant_type = "client_credentials"
   )
 
-  # Get bearer token
-  res <- httr::POST(paste0("https://",
-                           Sys.getenv("QUALTRICS_DATA_CENTER"),
-                           ".qualtrics.com/oauth2/token"),
-                    encode = "form",
-                    body = body,
-                    httr::authenticate(Sys.getenv("QUALTRICS_CLIENT_ID"),
-                                       Sys.getenv("QUALTRICS_CLIENT_SECRET"),
-                                       type = "basic"))
+  # If use keychain
+  if(Sys.getenv("QUALTRICS_USE_KEYCHAIN")) {
+
+    # Retrieve OS
+    os <- Sys.getenv("QUALTRICS_SYS_OS")
+
+    # Set data center
+    data_center <- switch (
+
+      os,
+      osx = keyringr::decrypt_kc_pw("qualtrics_data_center"),
+      linux = keyringr::decrypt_gk_pw("key qualtrics_data_center")
+
+    )
+
+    # Set as env. variable
+    Sys.setenv("QUALTRICS_DATA_CENTER" = data_center)
+
+    res <- switch(
+      os,
+      # mac
+      osx = httr::POST(paste0("https://",
+                              Sys.getenv("QUALTRICS_DATA_CENTER"),
+                              ".qualtrics.com/oauth2/token"),
+                       encode = "form",
+                       body = body,
+                       httr::authenticate(keyringr::decrypt_kc_pw("qualtrics_api_client"),
+                                          keyringr::decrypt_kc_pw("qualtrics_api_secret"),
+                                          type = "basic")),
+      # linux
+      linux = httr::POST(paste0("https://",
+                                Sys.getenv("QUALTRICS_DATA_CENTER"),
+                                ".qualtrics.com/oauth2/token"),
+                         encode = "form",
+                         body = body,
+                         httr::authenticate(keyringr::decrypt_gk_pw("key qualtrics_api_client"),
+                                            keyringr::decrypt_gk_pw("key qualtrics_api_secret"),
+                                            type = "basic"))
+    )
+
+  } else { # User does not use keychain
+
+    # Get bearer token
+    res <- httr::POST(paste0("https://",
+                             Sys.getenv("QUALTRICS_DATA_CENTER"),
+                             ".qualtrics.com/oauth2/token"),
+                      encode = "form",
+                      body = body,
+                      httr::authenticate(Sys.getenv("QUALTRICS_CLIENT_ID"),
+                                         Sys.getenv("QUALTRICS_CLIENT_SECRET"),
+                                         type = "basic"))
+
+  }
 
   ### CHECK FOR WARNINGS AND OR ERRORS
   httr::warn_for_status(res)
@@ -34,12 +78,29 @@ qualtrics_create_header <- function() {
 
   if(Sys.getenv("QUALTRICS_AUTH_TYPE") == "token") {
 
-    c(
-      'X-API-TOKEN' = Sys.getenv("QUALTRICS_API_TOKEN"),
-      'Content-Type' = "application/json",
-      'Accept' = '*/*',
-      'accept-encoding' = 'gzip, deflate'
-    )
+    # If keychain
+    if(Sys.getenv("QUALTRICS_USE_KEYCHAIN")) {
+
+      os <- Sys.getenv("QUALTRICS_SYS_OS")
+
+      switch(
+
+        os,
+        osx = c(
+          'X-API-TOKEN' = keyringr::decrypt_kc_pw("qualtrics_api_token"),
+          'Content-Type' = "application/json",
+          'Accept' = '*/*',
+          'accept-encoding' = 'gzip, deflate'
+        ),
+        linux = c(
+          'X-API-TOKEN' = keyringr::decrypt_gk_pw("key qualtrics_api_token"),
+          'Content-Type' = "application/json",
+          'Accept' = '*/*',
+          'accept-encoding' = 'gzip, deflate'
+        )
+      )
+
+    }
 
   } else {
 
