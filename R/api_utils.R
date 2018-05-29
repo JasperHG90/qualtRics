@@ -83,6 +83,17 @@ qualtrics_create_header <- function() {
 
       os <- Sys.getenv("QUALTRICS_SYS_OS")
 
+      # Set data center as env variable
+      data_center <- switch(
+
+        os,
+        osx = keyringr::decrypt_kc_pw("qualtrics_data_center"),
+        linux = keyringr::decrypt_gk_pw("key qualtrics_data_center")
+
+      )
+
+      Sys.setenv("QUALTRICS_DATA_CENTER" = data_center)
+
       switch(
 
         os,
@@ -154,6 +165,7 @@ qualtrics_handle_request <- function(verb = c("GET", "POST"),
           if(tmp$meta$error$errorCode == "AUTH_6.0") {
 
             # Get new bearer token
+            message("Retrieving new bearer token ... ")
             qualtrics_set_bearer_token()
 
             # Construct header

@@ -253,6 +253,15 @@ qualtrics_helper_keychain_credentials <- function(type = c("oauth", "token")) {
   # Get OS variable
   os <- Sys.getenv("QUALTRICS_SYS_OS")
 
+  # If empty, call function to retrieve OS
+  if(os == "") {
+
+    os <- get_os()
+
+    Sys.setenv("QUALTRICS_SYS_OS" = os)
+
+  }
+
   if(type == "oauth") {
 
     client_id <- switch(
@@ -342,5 +351,27 @@ qualtrics_helper_envs_set <- function(type = c("oauth", "token")) {
     warning("Qualtrics data center is not registered")
 
   }
+
+}
+
+# Helper function to determine type of OS
+# Todo: add windows
+get_os <- function(){
+
+  sysinf <- Sys.info()
+
+  if (!is.null(sysinf)){
+    os <- sysinf['sysname']
+    if (os == 'Darwin')
+      os <- "osx"
+  } else { ## mystery machine
+    os <- .Platform$OS.type
+    if (grepl("^darwin", R.version$os))
+      os <- "osx"
+    if (grepl("linux-gnu", R.version$os))
+      os <- "linux"
+  }
+
+  tolower(os)
 
 }
