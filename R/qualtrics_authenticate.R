@@ -4,6 +4,9 @@ qualtrics_authenticate <- function(type = c("token", "oauth"),
                                    use_keychain = FALSE,
                                    ...) {
 
+  # Set use keychain to false
+  Sys.setenv("QUALTRICS_USE_KEYCHAIN" = FALSE)
+
   # Plan ----
 
    # Depending on the type (token or oauth)
@@ -27,6 +30,16 @@ qualtrics_authenticate <- function(type = c("token", "oauth"),
 
     user_passed_secret <- opts$client_secret
 
+    if(use_keychain) {
+
+      warning(
+        "'use_keychain' is set to TRUE and options passed to this function will not be saved
+in the local environment. If you want to override the default options, set 'use_keychain'
+to FALSE."
+      )
+
+    }
+
   } else {
 
     user_passed_secret <- NULL
@@ -35,6 +48,16 @@ qualtrics_authenticate <- function(type = c("token", "oauth"),
   if("client_id" %in% names(opts)) {
 
     user_passed_id <- opts$client_id
+
+    if(use_keychain) {
+
+      warning(
+        "'use_keychain' is set to TRUE and options passed to this function will not be saved
+in the local environment. If you want to override the default options, set 'use_keychain'
+to FALSE."
+      )
+
+    }
 
   } else {
 
@@ -45,6 +68,16 @@ qualtrics_authenticate <- function(type = c("token", "oauth"),
 
     user_passed_token <- opts$api_token
 
+    if(use_keychain) {
+
+      warning(
+        "'use_keychain' is set to TRUE and options passed to this function will not be saved
+in the local environment. If you want to override the default options, set 'use_keychain'
+to FALSE."
+      )
+
+    }
+
   } else {
 
     user_passed_token <- NULL
@@ -53,6 +86,16 @@ qualtrics_authenticate <- function(type = c("token", "oauth"),
   if("data_center" %in% names(opts)) {
 
     user_passed_datacenter <- opts$data_center
+
+    if(use_keychain) {
+
+      warning(
+        "'use_keychain' is set to TRUE and options passed to this function will not be saved
+in the local environment. If you want to override the default options, set 'use_keychain'
+to FALSE."
+      )
+
+    }
 
   } else {
 
@@ -71,9 +114,32 @@ qualtrics_authenticate <- function(type = c("token", "oauth"),
     if(use_keychain) {
 
       cred <- qualtrics_helper_keychain_credentials("oauth")
-      client_id <- cred$client_id
-      client_secret <- cred$client_secret
-      data_center <- cred$data_center
+
+      check <- vapply(cred, function(x) {
+
+        if(!is.null(x)) {
+          if(x > 0) {
+            TRUE
+          } else {
+            FALSE
+          }
+        } else {
+          FALSE
+        }
+
+      },
+      TRUE)
+
+      if(!all(check)) {
+
+        stop(
+          "An error occurred while retrieving your credentials from the keychain. Ensure that
+you set your credentials correctly or use another method to authenticate."
+        )
+
+      }
+
+      Sys.setenv("QUALTRICS_USE_KEYCHAIN" = TRUE)
 
     }
 
@@ -114,8 +180,31 @@ qualtrics_authenticate <- function(type = c("token", "oauth"),
     if(use_keychain) {
 
       cred <- qualtrics_helper_keychain_credentials("token")
-      api_token <- cred$token
-      data_center <- cred$data_center
+
+      check <- vapply(cred, function(x) {
+
+        if(!is.null(x)) {
+          if(x > 0) {
+            TRUE
+          } else {
+            FALSE
+          }
+        } else {
+          FALSE
+        }
+
+      },
+      TRUE)
+
+      if(!all(check)) {
+
+        stop(
+          "An error occurred while retrieving your credentials from the keychain.\nEnsure that you set your credentials correctly or use another method to authenticate."
+        )
+
+      }
+
+      Sys.setenv("QUALTRICS_USE_KEYCHAIN" = TRUE)
 
     }
 
@@ -155,7 +244,9 @@ qualtrics_helper_keychain_credentials <- function(type = c("oauth", "token")) {
   # Helper function to determine type of OS
   # Todo: add windows
   get_os <- function(){
+
     sysinf <- Sys.info()
+
     if (!is.null(sysinf)){
       os <- sysinf['sysname']
       if (os == 'Darwin')
@@ -167,7 +258,9 @@ qualtrics_helper_keychain_credentials <- function(type = c("oauth", "token")) {
       if (grepl("linux-gnu", R.version$os))
         os <- "linux"
     }
+
     tolower(os)
+
   }
 
   # Get OS
@@ -177,20 +270,21 @@ qualtrics_helper_keychain_credentials <- function(type = c("oauth", "token")) {
 
     client_id <- switch(
       os,
-      "osx" = keyringr::decrypt_kc_pw("qualtrics_api_client"),
-      "linux" = keyringr::decrypt_gk_pw("qualtrics_api_client")
+      "osx" = nchar(keyringr::decrypt_kc_pw("qualtrics_api_client")),
+      "linux" = nchar(keyringr::decrypt_gk_pw("key qualtrics_api_client"))
     )
+
     client_secret <- switch(
       os,
-      "osx" = keyringr::decrypt_kc_pw("qualtrics_api_secret"),
-      "linux" = keyringr::decrypt_gk_pw("qualtrics_api_secret")
+      "osx" = nchar(keyringr::decrypt_kc_pw("qualtrics_api_secret")),
+      "linux" = nchar(keyringr::decrypt_gk_pw("key qualtrics_api_secret"))
     )
 
     # Data center
     data_center <- switch(
       os,
-      "osx" = keyringr::decrypt_kc_pw("qualtrics_data_center"),
-      "linux" = keyringr::decrypt_gk_pw("qualtrics_data_center")
+      "osx" = nchar(keyringr::decrypt_kc_pw("qualtrics_data_center")),
+      "linux" = nchar(keyringr::decrypt_gk_pw("key qualtrics_data_center"))
     )
 
     # Return
@@ -205,15 +299,15 @@ qualtrics_helper_keychain_credentials <- function(type = c("oauth", "token")) {
     # Api & root url
     api_token <- switch(
       os,
-      "osx" = keyringr::decrypt_kc_pw("qualtrics_api_token"),
-      "linux" = keyringr::decrypt_gk_pw("qualtrics_api_token")
+      "osx" = nchar(keyringr::decrypt_kc_pw("qualtrics_api_token")),
+      "linux" = nchar(keyringr::decrypt_gk_pw("key qualtrics_api_token"))
     )
 
     # Data center
     data_center <- switch(
       os,
-      "osx" = keyringr::decrypt_kc_pw("qualtrics_data_center"),
-      "linux" = keyringr::decrypt_gk_pw("qualtrics_data_center")
+      "osx" = nchar(keyringr::decrypt_kc_pw("qualtrics_data_center")),
+      "linux" = nchar(keyringr::decrypt_gk_pw("key qualtrics_data_center"))
     )
 
     # Return
@@ -234,7 +328,7 @@ qualtrics_helper_envs_set <- function(type = c("oauth", "token")) {
   # If token
   if(type == "token") {
 
-    if(Sys.getenv("QUALTRICS_API_TOKEN") == "") {
+    if(Sys.getenv("QUALTRICS_API_TOKEN") == "" & Sys.getenv("QUALTRICS_USE_KEYCHAIN") == FALSE) {
 
       warning("Qualtrics api token is not registered")
 
@@ -242,13 +336,13 @@ qualtrics_helper_envs_set <- function(type = c("oauth", "token")) {
 
   } else if (type == "oauth") {
 
-    if(Sys.getenv("QUALTRICS_CLIENT_ID") == "") {
+    if(Sys.getenv("QUALTRICS_CLIENT_ID") == "" & Sys.getenv("QUALTRICS_USE_KEYCHAIN") == FALSE) {
 
       warning("Qualtrics client id is not registered")
 
     }
 
-    if(Sys.getenv("QUALTRICS_CLIENT_SECRET") == "") {
+    if(Sys.getenv("QUALTRICS_CLIENT_SECRET") == "" & Sys.getenv("QUALTRICS_USE_KEYCHAIN") == FALSE) {
 
       warning("Qualtrics client secret is not registered")
 
@@ -256,7 +350,7 @@ qualtrics_helper_envs_set <- function(type = c("oauth", "token")) {
 
   }
 
-  if(Sys.getenv("QUALTRICS_DATA_CENTER") == "") {
+  if(Sys.getenv("QUALTRICS_DATA_CENTER") == "" & Sys.getenv("QUALTRICS_USE_KEYCHAIN") == FALSE) {
 
     warning("Qualtrics data center is not registered")
 
