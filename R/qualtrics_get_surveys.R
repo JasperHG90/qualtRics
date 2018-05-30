@@ -18,7 +18,6 @@
 #'
 #' @seealso See \url{https://api.qualtrics.com/docs} for documentation on the Qualtrics API.
 #' @author Jasper Ginn
-#' @importFrom dplyr bind_rows
 #' @export
 #' @examples
 #' \dontrun{
@@ -49,13 +48,12 @@ qualtrics_get_surveys <- function() {
 
   # Check params
   cp <- checkParams()
-  # Function-specific API stuff
-  root_url <- appendRootUrl(Sys.getenv("QUALTRICS_ROOT_URL"), "surveys")
 
   # SEND REQUEST TO QUALTRICS ----
 
   # Send GET request to list all surveys
-  resp <- qualtricsApiRequest("GET", root_url)
+  resp <- qualtrics_handle_request("GET", "surveys")
+
   # Put results in list
   master <- list()
   # Append results
@@ -71,8 +69,7 @@ qualtrics_get_surveys <- function() {
   # WRAP-UP AND RETURN ----
 
   # Bind to one large data frame & return
-  d <- bind_rows(master)
+  d <- do.call(rbind.data.frame, master)
   return(d)
-
 
 }
