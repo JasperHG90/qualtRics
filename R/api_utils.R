@@ -123,6 +123,15 @@ qualtrics_create_header <- function() {
         )
       )
 
+    } else { # not use keychain
+
+      c(
+        'X-API-TOKEN' = Sys.getenv("QUALTRICS_API_TOKEN"),
+        'Content-Type' = "application/json",
+        'Accept' = '*/*',
+        'accept-encoding' = 'gzip, deflate'
+      )
+
     }
 
   } else {
@@ -149,8 +158,13 @@ qualtrics_handle_request <- function(verb = c("GET", "POST"),
   # If use oauth ...
   if(Sys.getenv("QUALTRICS_AUTH_TYPE") == "oauth") {
 
-    # Set bearer
-    qualtrics_set_bearer_token()
+    # If empty, set
+    if(Sys.getenv("QUALTRICS_OAUTH_TOKEN") == "") {
+
+      # Set bearer
+      qualtrics_set_bearer_token()
+
+    }
 
   }
 
