@@ -47,7 +47,7 @@ qualtrics_get_surveys <- function() {
   # CHECK PARAMS AND PREP QUERY ----
 
   # Check params
-  cp <- checkParams()
+  #cp <- checkParams()
 
   # SEND REQUEST TO QUALTRICS ----
 
@@ -60,16 +60,19 @@ qualtrics_get_surveys <- function() {
   master <- append(master, resp$result$elements)
   # If nextPage != null, keep calling
   while(!is.null(resp$result$nextPage)) {
+
     # Send GET request to list all surveys
     resp <- qualtricsApiRequest("GET", resp$result$nextPage)
     # Append results
     master <- append(master, resp$result$elements)
+
   }
 
   # WRAP-UP AND RETURN ----
 
   # Bind to one large data frame & return
   d <- do.call(rbind.data.frame, master)
+
   return(d)
 
 }

@@ -154,6 +154,13 @@ qualtrics_handle_request <- function(verb = c("GET", "POST"),
 
   }
 
+  # Must set data center
+  if(Sys.getenv("QUALTRICS_DATA_CENTER") == "") {
+
+    stop("Data center not found. Did you register your credentials using 'qualtrics_authenticate()'?")
+
+  }
+
   # Construct header
   header <- qualtrics_create_header()
 
