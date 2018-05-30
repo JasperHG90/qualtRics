@@ -1,5 +1,17 @@
 # New authenticate function
 
+#' Authenticate your api token, data center and oauth credentials
+#'
+#' @param type either one of 'token' (API credentials) or 'oauth' (using secret and id)
+#' @param use_keychain should qualtRics retrieve stored credentials from the keychain?
+#' @param ... any of the options (api_token, data_center, client_id, client_secret) can be passed as named objects. If you pass these parameters, they will override e.g. environment variables.
+#'
+#' @return exits silently
+#'
+#' @import keyringr
+#'
+#' @export
+
 qualtrics_authenticate <- function(type = c("token", "oauth"),
                                    use_keychain = FALSE,
                                    ...) {

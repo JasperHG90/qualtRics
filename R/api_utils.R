@@ -1,4 +1,12 @@
-#### Utilities to work with API
+#---------------------------------------------------------------------
+#
+# Utilities to communicate with the qualtrics API
+#
+# - set bearer token
+# - create a header to POST to API
+# - send a request to the API
+#
+#---------------------------------------------------------------------
 
 # Helper that fetches a bearer token for user if they use oauth method
 qualtrics_set_bearer_token <- function() {
@@ -9,7 +17,11 @@ qualtrics_set_bearer_token <- function() {
   )
 
   # If use keychain
-  if(Sys.getenv("QUALTRICS_USE_KEYCHAIN")) {
+  if(Sys.getenv("QUALTRICS_USE_KEYCHAIN") == "") {
+
+    stop("You must first register your credentials using 'qualtrics_authenticate()'")
+
+  } else if(Sys.getenv("QUALTRICS_USE_KEYCHAIN")) {
 
     # Retrieve OS
     os <- Sys.getenv("QUALTRICS_SYS_OS")
@@ -130,9 +142,17 @@ qualtrics_create_header <- function() {
 # Helper function that communicates a request to qualtrics API
 qualtrics_handle_request <- function(verb = c("GET", "POST"),
                                      endpoint,
-                                     body) {
+                                     body = NULL) {
   # Match arg
   verb <- match.arg(verb)
+
+  # If use oauth ...
+  if(Sys.getenv("QUALTRICS_AUTH_TYPE") == "oauth") {
+
+    # Set bearer
+    qualtrics_set_bearer_token()
+
+  }
 
   # Construct header
   header <- qualtrics_create_header()
@@ -195,11 +215,87 @@ qualtrics_handle_request <- function(verb = c("GET", "POST"),
 
   # Check if response type is OK
   cnt <- qualtRicsResponseCodes(res)
+
   # Check if OK
   if(cnt$OK) {
+
     # If notice occurs, raise warning
     w <- checkForWarnings(cnt)
     # return content
     return(cnt$content)
+
   }
+
+}
+
+# Checks responses against qualtrics response codes and returns error message.
+#
+# @param res response from httr::GET
+# @param raw if TRUE, add 'raw' flag to httr::content() function.
+#
+# @author Jasper Ginn
+
+qualtRicsResponseCodes <- function(res, raw=FALSE) {
+  # Check status code and raise error/warning
+  if(res$status_code == 200) {
+    if(raw) {
+      result <- httr::content(res, "raw")
+    } else {
+      result <- httr::content(res)
+    }
+    return(list(
+      "content" = result,
+      "OK" = TRUE
+    )
+    )
+  } else if(res$status_code == 401) {
+    stop("Qualtrics API raised an authentication (401) error - you may not have the\nrequired authorization. Please check your API key and root url.") # nolint
+  } else if(res$status_code == 400) {
+    stop("Qualtrics API raised a bad request (400) error - Please report this on\nhttps://github.com/ropensci/qualtRics/issues") # nolint
+  } else if(res$status_code == 404) {
+    stop("Qualtrics API complains that the requested resource cannot be found (404 error).\nPlease check if you are using the correct survey ID.") # nolint
+  } else if(res$status_code == 500) {
+    stop(paste0("Qualtrics API reports an internal server (500) error. Please contact\nQualtrics Support (https://www.qualtrics.com/contact/) and provide the instanceId and errorCode below.", "\n", # nolint
+                "\n",
+                "instanceId:", " ",
+                httr::content(res)$meta$error$instanceId,
+                "\n",
+                "errorCode: ",
+                httr::content(res)$meta$error$errorCode))
+    return(list(
+      "content" = httr::content(res),
+      "OK"= FALSE
+    ))
+  } else if(res$status_code == 503) {
+    stop(paste0("Qualtrics API reports a temporary internal server (500) error. Please\ncontact Qualtrics Support (https://www.qualtrics.com/contact/) with the instanceId and\nerrorCode below or retry your query.", "\n", # nolint
+                "\n",
+                "instanceId:", " ", httr::content(res)$meta$error$instanceId,
+                "\n",
+                "errorCode: ", httr::content(res)$meta$error$errorCode))
+    return(list(
+      "content" = httr::content(res),
+      "OK"= FALSE
+    )
+    )
+  } else if(res$status_code == 413) {
+    stop("The request body was too large. This can also happen in cases where a\nmultipart/form-data request is malformed.") # nolint
+  } else if(res$status_code == 429) {
+    stop("You have reached the concurrent request limit.")
+  }
+}
+
+# Check if httr GET result contains a warning
+#
+# @param resp object returned by 'qualtRicsResponseCodes()'
+#
+# @author Jasper Ginn
+
+checkForWarnings <- function(resp) {
+  # Raise warning if resp contains notice
+  if(!is.null(resp$content$meta)) {
+    if(!is.null(resp$content$meta$notice)) {
+      warning(resp$content$meta$notice)
+    }
+  }
+  NULL
 }
