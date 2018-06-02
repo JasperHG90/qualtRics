@@ -151,7 +151,8 @@ qualtrics_create_header <- function() {
 # Helper function that communicates a request to qualtrics API
 qualtrics_handle_request <- function(verb = c("GET", "POST"),
                                      endpoint,
-                                     body = NULL) {
+                                     body = NULL,
+                                     url = NULL) {
   # Match arg
   verb <- match.arg(verb)
 
@@ -175,15 +176,22 @@ qualtrics_handle_request <- function(verb = c("GET", "POST"),
 
   }
 
+  # if url is NULL ...
+  if(is.null(url)) {
+
+    url <- paste0("https://",
+                  Sys.getenv("QUALTRICS_DATA_CENTER"),
+                  ".qualtrics.com/API/v3/",
+                  endpoint)
+
+  }
+
   # Construct header
   header <- qualtrics_create_header()
 
   # Send request to qualtrics API
   res <- httr::VERB(verb,
-                    url = paste0("https://",
-                                 Sys.getenv("QUALTRICS_DATA_CENTER"),
-                                 ".qualtrics.com/API/v3/",
-                                 endpoint),
+                    url = url,
                     httr::add_headers(
                       header
                     ),
@@ -234,18 +242,19 @@ qualtrics_handle_request <- function(verb = c("GET", "POST"),
 
   }
 
+  #browser()
   # Check if response type is OK
   cnt <- qualtRicsResponseCodes(res)
 
   # Check if OK
-  if(cnt$OK) {
+  #if(cnt$OK) {
 
     # If notice occurs, raise warning
-    w <- checkForWarnings(cnt)
+    #w <- checkForWarnings(cnt)
     # return content
     return(cnt$content)
 
-  }
+  #}
 
 }
 
